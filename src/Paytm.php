@@ -2,6 +2,9 @@
 
 namespace AniketIN\Paytm;
 
+use Error;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Http;
 use paytm\paytmchecksum\PaytmChecksum;
 
 
@@ -21,6 +24,38 @@ class Paytm
         $this->domain = config('paytm.env') == 'production' ? "https://securegw.paytm.in" : "https://securegw-stage.paytm.in";
     }
 
+    protected function mergeChecksum(string $as = 'CHECKSUMHASH')
+    {
+        $this->params[$as] = PaytmChecksum::generateSignature($this->params, $this->merchantKey);
+    }
+
+    protected function verifyChecksum(Request $request)
+    {
+        $isValid = PaytmChecksum::verifySignature($request->all(), $this->merchantKey, $request->CHECKSUMHASH);
+        
+        if (!$isValid) {
+            throw new Error("Invalid checksum! data might be tampered.");
+        }
+    }
+
+    public function verify(Request $request)
+    {
+        $this->verifyChecksum($request);
+        return $request;
+    }
+
+    public function status(string $orderId)
+    {
+        $this->params['MID'] = $this->merchantId;
+        $this->params['ORDERID'] = $orderId;
+        
+        $this->mergeChecksum();
+
+        $response = Http::post("{$this->domain}/merchant-status/getTxnStatus", $this->params);
+
+        return $response;
+    }
+
     public function checkout(array $params)
     {
         $this->params = $params;
@@ -28,7 +63,7 @@ class Paytm
         $this->params['MID'] = $this->merchantId;
         $this->params['CHANNEL_ID'] = $this->channel;
         $this->params['WEBSITE'] = $this->website;
-
+        
         $this->mergeChecksum();
     
         return view('paytm::checkout-form', [
@@ -37,8 +72,17 @@ class Paytm
         ]);
     }
 
-    protected function mergeChecksum()
+    public function refund(array $params)
     {
-        $this->params['CHECKSUMHASH'] = PaytmChecksum::generateSignature($this->params, $this->merchantKey);
+        $this->params = $params;
+
+        $this->params["TXNTYPE"] = 'REFUND';
+        $this->params["MID"] = $this->merchantId;
+
+        $this->mergeChecksum('CHECKSUM');
+
+        return Http::post("{$this->domain}/refund/HANDLER_INTERNAL/REFUND", $this->params);
     }
+
+    
 }
