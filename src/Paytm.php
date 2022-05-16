@@ -84,5 +84,16 @@ class Paytm
         return Http::post("{$this->domain}/refund/HANDLER_INTERNAL/REFUND", $this->params);
     }
 
+    public function refundStatus(array $params)
+    {
+        $this->params = $params;
+
+        $this->params["MID"] = $this->merchantId;
+
+        $this->mergeChecksum('CHECKSUM');
+
+        return Http::post("{$this->domain}/refund/HANDLER_INTERNAL/getRefundStatus", $this->params);
+    }
+
     
 }
