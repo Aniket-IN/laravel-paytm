@@ -1,12 +1,12 @@
 <?php
 
-namespace VendorName\Skeleton\Commands;
+namespace AniketIN\Paytm\Commands;
 
 use Illuminate\Console\Command;
 
-class SkeletonCommand extends Command
+class PaytmCommand extends Command
 {
-    public $signature = 'skeleton';
+    public $signature = 'laravel-paytm';
 
     public $description = 'My command';
 
