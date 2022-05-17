@@ -7,7 +7,6 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use paytm\paytmchecksum\PaytmChecksum;
 
-
 class Paytm
 {
     protected $merchantId;
@@ -16,7 +15,8 @@ class Paytm
     protected $params;
     protected $domain;
 
-    public function __construct() {
+    public function __construct()
+    {
         $this->merchantId = config('paytm.merchant_id');
         $this->merchantKey = config('paytm.merchant_key');
         $this->channel = config('paytm.channel');
@@ -42,13 +42,12 @@ class Paytm
     protected function verifyChecksum(Request $request)
     {
         $isValid = PaytmChecksum::verifySignature($request->all(), $this->merchantKey, $request->CHECKSUMHASH);
-        
-        if (!$isValid) {
+
+        if (! $isValid) {
             throw new Error("Invalid checksum! data might be tampered.");
         }
     }
 
-    
     public function checkout(array $params)
     {
         $this->params = $params;
@@ -56,9 +55,9 @@ class Paytm
         $this->params['MID'] = $this->merchantId;
         $this->params['CHANNEL_ID'] = $this->channel;
         $this->params['WEBSITE'] = $this->website;
-        
+
         $this->mergeChecksum($this->params);
-    
+
         return view('paytm::checkout-form', [
             'params' => $this->params,
             'txn_url' => "{$this->domain}/order/process",
@@ -68,6 +67,7 @@ class Paytm
     public function verify(Request $request)
     {
         $this->verifyChecksum($request);
+
         return $request;
     }
 
@@ -75,7 +75,7 @@ class Paytm
     {
         $this->params['body']['mid'] = $this->merchantId;
         $this->params['body']['orderId'] = $orderId;
-        
+
         $this->mergeSignature();
 
         $response = Http::post("{$this->domain}/v3/order/status", $this->params);
@@ -83,7 +83,6 @@ class Paytm
         return $response;
     }
 
-   
     public function refund(array $params)
     {
         $this->params['body'] = $params;
@@ -95,8 +94,6 @@ class Paytm
         return Http::post("{$this->domain}/refund/apply", $this->params);
     }
 
-    
-
     public function refundStatus(array $params)
     {
         $this->params['body'] = $params;
@@ -105,6 +102,4 @@ class Paytm
 
         return Http::post("{$this->domain}/v2/refund/status", $this->params);
     }
-
-    
 }

@@ -2,9 +2,9 @@
 
 namespace AniketIN\Paytm;
 
+use AniketIN\Paytm\Commands\PaytmCommand;
 use Spatie\LaravelPackageTools\Package;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
-use AniketIN\Paytm\Commands\PaytmCommand;
 
 class PaytmServiceProvider extends PackageServiceProvider
 {

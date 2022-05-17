@@ -2,9 +2,9 @@
 
 namespace AniketIN\Paytm\Tests;
 
+use AniketIN\Paytm\PaytmServiceProvider;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Orchestra\Testbench\TestCase as Orchestra;
-use AniketIN\Paytm\PaytmServiceProvider;
 
 class TestCase extends Orchestra
 {
