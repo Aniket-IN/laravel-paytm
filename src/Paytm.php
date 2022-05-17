@@ -24,9 +24,19 @@ class Paytm
         $this->domain = config('paytm.env') == 'production' ? "https://securegw.paytm.in" : "https://securegw-stage.paytm.in";
     }
 
-    protected function mergeChecksum(string $as = 'CHECKSUMHASH')
+    protected function mergeChecksum($params, string $as = 'CHECKSUMHASH')
     {
-        $this->params[$as] = PaytmChecksum::generateSignature($this->params, $this->merchantKey);
+        $this->params[$as] = $this->getChecksum($params);
+    }
+
+    protected function getChecksum($params)
+    {
+        return PaytmChecksum::generateSignature($params, $this->merchantKey);
+    }
+
+    private function mergeSignature()
+    {
+        $this->params['head']["signature"] = $this->getChecksum(json_encode($this->params['body']));
     }
 
     protected function verifyChecksum(Request $request)
@@ -38,24 +48,7 @@ class Paytm
         }
     }
 
-    public function verify(Request $request)
-    {
-        $this->verifyChecksum($request);
-        return $request;
-    }
-
-    public function status(string $orderId)
-    {
-        $this->params['MID'] = $this->merchantId;
-        $this->params['ORDERID'] = $orderId;
-        
-        $this->mergeChecksum();
-
-        $response = Http::post("{$this->domain}/merchant-status/getTxnStatus", $this->params);
-
-        return $response;
-    }
-
+    
     public function checkout(array $params)
     {
         $this->params = $params;
@@ -64,7 +57,7 @@ class Paytm
         $this->params['CHANNEL_ID'] = $this->channel;
         $this->params['WEBSITE'] = $this->website;
         
-        $this->mergeChecksum();
+        $this->mergeChecksum($this->params);
     
         return view('paytm::checkout-form', [
             'params' => $this->params,
@@ -72,27 +65,45 @@ class Paytm
         ]);
     }
 
+    public function verify(Request $request)
+    {
+        $this->verifyChecksum($request);
+        return $request;
+    }
+
+    public function status(string $orderId)
+    {
+        $this->params['body']['mid'] = $this->merchantId;
+        $this->params['body']['orderId'] = $orderId;
+        
+        $this->mergeSignature();
+
+        $response = Http::post("{$this->domain}/v3/order/status", $this->params);
+
+        return $response;
+    }
+
+   
     public function refund(array $params)
     {
-        $this->params = $params;
+        $this->params['body'] = $params;
+        $this->params['body']["mid"] = $this->merchantId;
+        $this->params['body']["txnType"] = 'REFUND';
 
-        $this->params["TXNTYPE"] = 'REFUND';
-        $this->params["MID"] = $this->merchantId;
+        $this->mergeSignature();
 
-        $this->mergeChecksum('CHECKSUM');
-
-        return Http::post("{$this->domain}/refund/HANDLER_INTERNAL/REFUND", $this->params);
+        return Http::post("{$this->domain}/refund/apply", $this->params);
     }
+
+    
 
     public function refundStatus(array $params)
     {
-        $this->params = $params;
+        $this->params['body'] = $params;
+        $this->params['body']["mid"] = $this->merchantId;
+        $this->params['head']["signature"] = $this->getChecksum(json_encode($this->params['body']));
 
-        $this->params["MID"] = $this->merchantId;
-
-        $this->mergeChecksum('CHECKSUM');
-
-        return Http::post("{$this->domain}/refund/HANDLER_INTERNAL/getRefundStatus", $this->params);
+        return Http::post("{$this->domain}/v2/refund/status", $this->params);
     }
 
     
